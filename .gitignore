@@ -5,3 +5,12 @@ build/
 .DS_Store
 *.log
 norebook.ssh
+
+# Python packaging
+*.egg-info/
+*.egg
+*.whl
+.eggs/
+__pycache__/
+*.pyc
+*.pyo

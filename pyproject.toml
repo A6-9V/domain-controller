@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "domain-controller"
+version = "0.1.0"
+description = "A domain controller service for managing Cloudflare DNS and security settings"
+readme = "README.md"
+requires-python = ">=3.8"
+authors = [
+    {name = "A6-9V", email = "198982749+Copilot@users.noreply.github.com"}
+]
+license = "MIT"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "requests",
+]
+
+[project.urls]
+Homepage = "https://github.com/A6-9V/domain-controller"
+"Bug Tracker" = "https://github.com/A6-9V/domain-controller/issues"
+Repository = "https://github.com/A6-9V/domain-controller"
+
+[project.scripts]
+domain-controller = "manage_cloudflare:main"
+
+[tool.setuptools]
+py-modules = ["manage_cloudflare"]

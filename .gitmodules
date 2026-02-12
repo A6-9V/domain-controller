@@ -1,0 +1,3 @@
+[submodule "automation/mql5-automation"]
+	path = automation/mql5-automation
+	url = https://github.com/A6-9V/MQL5-Google-Onedrive

@@ -30,20 +30,30 @@ domain-controller --help
 
 The tool requires the following environment variables:
 - `CLOUDFLARE_API_TOKEN`: Your Cloudflare API token
-- `CLOUDFLARE_ZONE_ID`: The Zone ID for your domain
+- `CLOUDFLARE_ZONES`: Comma-separated list of domain:zone_id mappings (e.g., `example.com:id1,test.org:id2`)
+- `CLOUDFLARE_ZONE_ID`: Generic fallback Zone ID
+- `DOMAIN_NAME`: Domain name for the generic fallback
 - `CLOUDFLARE_ACCOUNT_ID`: Your Cloudflare Account ID (optional)
 
 ### Commands
 
 ```bash
-# Check security status
+# List all zones in the account
+domain-controller --list-zones
+
+# Check security status for configured zones
 domain-controller --status
 
-# Set security level
+# Set security level for configured zones
 domain-controller --security-level high
+# OR
+domain-controller --set high
 
-# List DNS records
+# List DNS records for configured zones
 domain-controller --list-dns
+
+# Target a specific domain
+domain-controller --domain example.com --status
 ```
 
 ## Development

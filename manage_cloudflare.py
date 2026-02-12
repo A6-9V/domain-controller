@@ -11,7 +11,15 @@ def load_config():
     """Load configuration from environment variables."""
     zones = {}
 
-    # Check for specific env vars
+    # Support for flexible CLOUDFLARE_ZONES env var (format: domain1:id1,domain2:id2)
+    if os.environ.get("CLOUDFLARE_ZONES"):
+        zones_raw = os.environ.get("CLOUDFLARE_ZONES")
+        for z in zones_raw.split(","):
+            if ":" in z:
+                domain, zid = z.split(":", 1)
+                zones[domain.strip()] = zid.strip()
+
+    # Check for specific legacy env vars
     if os.environ.get("CLOUDFLARE_ZONE_ID_LENGKUNDEE"):
         zones["lengkundee01.org"] = os.environ.get("CLOUDFLARE_ZONE_ID_LENGKUNDEE")
     elif os.environ.get("CLOUDFLARE_ZONE_ID") and os.environ.get("DOMAIN_NAME") == "lengkundee01.org":
@@ -36,6 +44,25 @@ def get_headers(api_token):
         "Authorization": f"Bearer {api_token}",
         "Content-Type": "application/json"
     }
+
+def list_zones(api_token):
+    """List all zones in the account."""
+    url = f"{BASE_URL}/zones"
+    try:
+        response = requests.get(url, headers=get_headers(api_token))
+        response.raise_for_status()
+        data = response.json()
+        if data.get("success"):
+            print("Configured Zones in Cloudflare Account:")
+            for zone in data["result"]:
+                print(f"  {zone['name']} (ID: {zone['id']}, Status: {zone['status']})")
+            return True
+        else:
+            print(f"Error listing zones: {data.get('errors')}")
+            return False
+    except requests.exceptions.RequestException as e:
+        print(f"HTTP Request failed while listing zones: {e}")
+        return False
 
 def get_security_level(zone_id, api_token):
     """Get the current security level."""
@@ -100,10 +127,16 @@ def main():
     parser = argparse.ArgumentParser(description="Manage Cloudflare Zone Settings")
     parser.add_argument("--status", action="store_true", help="Get current security level for all configured zones")
     parser.add_argument("--set", dest="security_level", help="Set security level for all configured zones")
+    parser.add_argument("--security-level", dest="security_level_alias", help="Set security level for all configured zones (alias for --set)")
     parser.add_argument("--list-dns", action="store_true", help="List DNS records for all configured zones")
+    parser.add_argument("--list-zones", action="store_true", help="List all zones in the Cloudflare account")
     parser.add_argument("--domain", help="Target a specific domain instead of all")
 
     args = parser.parse_args()
+
+    # Handle alias
+    if args.security_level_alias:
+        args.security_level = args.security_level_alias
 
     config = load_config()
 
@@ -111,32 +144,38 @@ def main():
         print("Error: Missing CLOUDFLARE_API_TOKEN environment variable.")
         sys.exit(1)
 
-    if not config["zones"]:
-        print("Error: No zones configured. Set CLOUDFLARE_ZONE_ID_LENGKUNDEE, CLOUDFLARE_ZONE_ID_GENXFX, or CLOUDFLARE_ZONE_ID.")
-        sys.exit(1)
+    if args.list_zones:
+        list_zones(config["api_token"])
 
-    target_zones = config["zones"]
-    if args.domain:
-        if args.domain in config["zones"]:
-            target_zones = {args.domain: config["zones"][args.domain]}
-        else:
-            print(f"Error: Domain {args.domain} not found in configuration. Available domains: {', '.join(config['zones'].keys())}")
+    # If zone-specific actions are requested, ensure zones are configured
+    zone_actions = args.status or args.security_level or args.list_dns
+    if zone_actions:
+        if not config["zones"]:
+            print("Error: No zones configured. Set CLOUDFLARE_ZONES, CLOUDFLARE_ZONE_ID, etc.")
             sys.exit(1)
 
-    for domain, zone_id in target_zones.items():
-        print(f"--- Processing Domain: {domain} (ID: {zone_id}) ---")
-        if args.status:
-            level = get_security_level(zone_id, config["api_token"])
-            if level:
-                print(f"Current Security Level: {level}")
+        target_zones = config["zones"]
+        if args.domain:
+            if args.domain in config["zones"]:
+                target_zones = {args.domain: config["zones"][args.domain]}
+            else:
+                print(f"Error: Domain {args.domain} not found in configuration. Available domains: {', '.join(config['zones'].keys())}")
+                sys.exit(1)
 
-        if args.security_level:
-            set_security_level(zone_id, config["api_token"], args.security_level)
+        for domain, zone_id in target_zones.items():
+            print(f"--- Processing Domain: {domain} (ID: {zone_id}) ---")
+            if args.status:
+                level = get_security_level(zone_id, config["api_token"])
+                if level:
+                    print(f"Current Security Level: {level}")
 
-        if args.list_dns:
-            list_dns_records(zone_id, config["api_token"])
+            if args.security_level:
+                set_security_level(zone_id, config["api_token"], args.security_level)
 
-    if not (args.status or args.security_level or args.list_dns):
+            if args.list_dns:
+                list_dns_records(zone_id, config["api_token"])
+
+    if not (args.status or args.security_level or args.list_dns or args.list_zones):
         parser.print_help()
 
 if __name__ == "__main__":

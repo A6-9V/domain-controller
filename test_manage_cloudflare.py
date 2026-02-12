@@ -2,6 +2,7 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 from io import StringIO
+import os
 
 # Mock requests before importing manage_cloudflare
 mock_requests = MagicMock()
@@ -129,13 +130,46 @@ class TestManageCloudflare(unittest.TestCase):
 
         self.assertFalse(result)
 
+    def test_list_zones_success(self):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "success": True,
+            "result": [
+                {"name": "example.com", "id": "zone123", "status": "active"}
+            ]
+        }
+        mock_requests.get.return_value = mock_response
+
+        with patch('sys.stdout', new=StringIO()) as fake_out:
+            result = manage_cloudflare.list_zones(self.api_token)
+            output = fake_out.getvalue()
+
+        self.assertTrue(result)
+        self.assertIn("example.com (ID: zone123, Status: active)", output)
+
     @patch('os.environ.get')
-    def test_load_config(self, mock_env_get):
+    def test_load_config_flexible(self, mock_env_get):
+        def side_effect(key, default=None):
+            env = {
+                "CLOUDFLARE_ZONES": "domain1.com:id1,domain2.com:id2",
+                "CLOUDFLARE_API_TOKEN": "api_tok"
+            }
+            return env.get(key, default)
+
+        mock_env_get.side_effect = side_effect
+
+        config = manage_cloudflare.load_config()
+
+        self.assertEqual(config["zones"]["domain1.com"], "id1")
+        self.assertEqual(config["zones"]["domain2.com"], "id2")
+        self.assertEqual(config["api_token"], "api_tok")
+
+    @patch('os.environ.get')
+    def test_load_config_legacy(self, mock_env_get):
         def side_effect(key, default=None):
             env = {
                 "CLOUDFLARE_ZONE_ID_LENGKUNDEE": "zone_leng",
                 "CLOUDFLARE_ZONE_ID_GENXFX": "zone_genx",
-                "CLOUDFLARE_ACCOUNT_ID": "acc_id",
                 "CLOUDFLARE_API_TOKEN": "api_tok"
             }
             return env.get(key, default)
@@ -146,8 +180,6 @@ class TestManageCloudflare(unittest.TestCase):
 
         self.assertEqual(config["zones"]["lengkundee01.org"], "zone_leng")
         self.assertEqual(config["zones"]["genxfx.org"], "zone_genx")
-        self.assertEqual(config["account_id"], "acc_id")
-        self.assertEqual(config["api_token"], "api_tok")
 
     @patch('manage_cloudflare.load_config')
     @patch('manage_cloudflare.get_security_level')
@@ -166,6 +198,36 @@ class TestManageCloudflare(unittest.TestCase):
 
         self.assertIn("Current Security Level: high", output)
         mock_get_level.assert_called_once_with("zone123", "token123")
+
+    @patch('manage_cloudflare.load_config')
+    @patch('manage_cloudflare.set_security_level')
+    def test_main_security_level_alias(self, mock_set_level, mock_load_config):
+        mock_load_config.return_value = {
+            "zones": {"example.com": "zone123"},
+            "api_token": "token123",
+            "account_id": "acc123"
+        }
+
+        with patch('sys.argv', ['manage_cloudflare.py', '--security-level', 'high']):
+            with patch('sys.stdout'):
+                manage_cloudflare.main()
+
+        mock_set_level.assert_called_once_with("zone123", "token123", "high")
+
+    @patch('manage_cloudflare.load_config')
+    @patch('manage_cloudflare.list_zones')
+    def test_main_list_zones(self, mock_list_zones, mock_load_config):
+        mock_load_config.return_value = {
+            "zones": {}, # No zones configured, but --list-zones should still work
+            "api_token": "token123",
+            "account_id": "acc123"
+        }
+
+        with patch('sys.argv', ['manage_cloudflare.py', '--list-zones']):
+            with patch('sys.stdout'):
+                manage_cloudflare.main()
+
+        mock_list_zones.assert_called_once_with("token123")
 
 if __name__ == '__main__':
     unittest.main()

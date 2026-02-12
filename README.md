@@ -2,6 +2,27 @@
 
 A domain controller service for managing Cloudflare DNS and security settings.
 
+## Prerequisites
+
+### Jules CLI
+The Jules CLI is used for asynchronous coding tasks. To install it globally:
+```bash
+npm install -g @google/jules
+```
+
+### Docker
+Docker is required for container management. To install on Ubuntu/Debian:
+```bash
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+Verify that Docker is running:
+```bash
+sudo systemctl status docker
+sudo systemctl start docker
+```
+
 ## Installation
 
 You can install the package using pip:

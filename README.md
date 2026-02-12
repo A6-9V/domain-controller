@@ -12,8 +12,23 @@ pip install domain-controller
 
 Or install from source:
 
+### Using HTTPS
 ```bash
 git clone https://github.com/A6-9V/domain-controller.git
+cd domain-controller
+pip install -e .
+```
+
+### Using SSH
+```bash
+git clone git@github.com:A6-9V/domain-controller.git
+cd domain-controller
+pip install -e .
+```
+
+### Using GitHub CLI
+```bash
+gh repo clone A6-9V/domain-controller
 cd domain-controller
 pip install -e .
 ```

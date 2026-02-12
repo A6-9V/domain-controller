@@ -12,3 +12,8 @@ sudo systemctl status docker
 sudo systemctl start docker
 
 echo "Setup complete. Jules and Docker are installed."
+
+# Trading Environment Initialization (Optional)
+# To start the trading environment, run:
+# cd trading && sudo docker-compose up -d
+# echo "Trading environment is starting. Access VNC at port 6901."
